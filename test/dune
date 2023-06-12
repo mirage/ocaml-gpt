@@ -1,2 +1,3 @@
 (test
- (name ocaml_gpt))
+ (name test_gpt)
+ (libraries gpt alcotest fmt))
