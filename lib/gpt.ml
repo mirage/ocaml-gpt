@@ -28,15 +28,18 @@
     }
   
     let make ?(name="") ~type_guid ~attributes starting_lba ending_lba =
-      let partition_guid = Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
-      {
-        type_guid;
-        partition_guid;
-        starting_lba;
-        ending_lba;
-        attributes;
-        name;
-      }    
+      match Uuidm.of_string type_guid with
+    | None -> Error (Printf.sprintf "Invalid type_guid: not a valid UUID\n%!")
+    | Some _ ->
+        let partition_guid = Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
+        Ok {
+          type_guid;
+          partition_guid;
+          starting_lba;
+          ending_lba;
+          attributes;
+          name;
+        }    
   
     (** extracted from https://en.m.wikipedia.org/wiki/GUID_Partition_Table **)
     let sizeof = 128

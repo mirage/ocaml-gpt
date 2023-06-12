@@ -24,7 +24,7 @@
       name : string;
     }
   
-    val make : ?name:string -> type_guid:string -> attributes:int64 -> int64 -> int64 -> t
+    val make : ?name:string -> type_guid:string -> attributes:int64 -> int64 -> int64 -> (t, string) result
   
     val unmarshal : Cstruct.t -> (t, string) result
   
