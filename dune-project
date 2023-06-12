@@ -11,7 +11,7 @@
 
 (maintainers "PizieDust <playersrebirth@gmail.com>")
 
-(license LICENSE)
+(license ISC)
 
 (documentation https://github.com/PizieDust/ocaml-gpt)
 
