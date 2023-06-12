@@ -147,58 +147,77 @@ let calculate_header_crc32 header =
     ) Checkseum.Crc32.default partitions
 
 let make partitions = 
-  let current_lba = 1L in
-  let backup_lba = 0L in
-  let first_usable_lba = 0L in
-  let last_usable_lba = 0L in
-  let partition_entry_lba = 2L in
   let num_partition_entries = List.length partitions in
-  let disk_guid =  Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
-  let partition_size = Int32.of_int Partition.sizeof in
-  let header_size = Int32.of_int sizeof in
-  let revision = 0x010000l in
-  let signature = "EFI PART" in
-  let reserved = 0l in
-  let partitions_crc32 =
-    Optint.to_int32 (calculate_partition_crc32 partitions)
-  in
-  let header_crc32 =
-    let header = {
+  if num_partition_entries > 128 then 
+    Error ((Printf.sprintf "Number of partitions %d exceeds required number %d\n%!") num_partition_entries 128)
+  else
+    let partitions = 
+      List.sort(fun p1 p2 ->
+        Int64.unsigned_compare p1.Partition.starting_lba p2.Partition.starting_lba) 
+      partitions
+    in
+    (* Check for overlapping partions *)
+    List.fold_left
+    (
+      fun r p ->
+        r >>= fun offset ->
+        if Int64.unsigned_compare offset p.Partition.starting_lba <= 0
+      then
+        Ok (Int64.add p.Partition.starting_lba p.Partition.ending_lba)
+      else Error (Printf.sprintf "Partitions overlap"))
+    (Ok 1L) partitions
+    >>= fun (_ : int64) ->
+    let current_lba = 1L in
+    let backup_lba = 0L in
+    let first_usable_lba = 0L in
+    let last_usable_lba = 0L in
+    let partition_entry_lba = 2L in
+    let disk_guid =  Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
+    let partition_size = Int32.of_int Partition.sizeof in
+    let header_size = Int32.of_int sizeof in
+    let revision = 0x010000l in
+    let signature = "EFI PART" in
+    let reserved = 0l in
+    let partitions_crc32 =
+      Optint.to_int32 (calculate_partition_crc32 partitions)
+    in
+    let header_crc32 =
+      let header = {
+        signature;
+        revision;
+        header_size;
+        header_crc32 = 0l; (* Temporary value before caculating *)
+        reserved;
+        current_lba;
+        backup_lba;
+        first_usable_lba;
+        last_usable_lba;
+        disk_guid;
+        partition_entry_lba;
+        num_partition_entries;
+        partitions;
+        partition_size;
+        partitions_crc32;
+      } in
+      Optint.to_int32 (calculate_header_crc32 header)
+    in
+    Ok { 
       signature;
       revision;
       header_size;
-      header_crc32 = 0l; (* Temporary value before caculating *)
+      header_crc32;
       reserved;
-      current_lba;
-      backup_lba;
-      first_usable_lba;
+      current_lba; 
+      backup_lba; 
+      first_usable_lba; 
       last_usable_lba;
       disk_guid;
       partition_entry_lba;
-      num_partition_entries;
+      num_partition_entries; 
       partitions;
       partition_size;
       partitions_crc32;
-    } in
-    Optint.to_int32 (calculate_header_crc32 header)
-  in
-  Ok { 
-    signature;
-    revision;
-    header_size;
-    header_crc32;
-    reserved;
-    current_lba; 
-    backup_lba; 
-    first_usable_lba; 
-    last_usable_lba;
-    disk_guid;
-    partition_entry_lba;
-    num_partition_entries; 
-    partitions;
-    partition_size;
-    partitions_crc32;
-  }
+    }
 
   let signature_offset = 0
   let revision_offset = 8
