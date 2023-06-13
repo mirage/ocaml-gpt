@@ -14,44 +14,46 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
- module Partition : sig
-    type t = {
-      type_guid : Uuidm.t;
-      partition_guid : Uuidm.t;
-      starting_lba : int64;
-      ending_lba : int64;
-      attributes : int64;
-      name : string;
-    }
-  
-    val make : ?name:string -> type_guid:string -> attributes:int64 -> int64 -> int64 -> (t, string) result
-  
-    val unmarshal : Cstruct.t -> (t, string) result
-  
-    val marshal : Cstruct.t -> t -> unit
-  end
-  
+module Partition : sig
   type t = {
-    signature : string;
-    revision : int32;
-    header_size : int32;
-    header_crc32 : int32;
-    reserved : int32;
-    current_lba : int64;
-    backup_lba : int64;
-    first_usable_lba : int64;
-    last_usable_lba : int64;
-    disk_guid : Uuidm.t;
-    partition_entry_lba : int64;
-    num_partition_entries : int32;
-    partitions : Partition.t list;
-    partition_size : int32;
-    partitions_crc32 : int32;
+    type_guid : Uuidm.t;
+    partition_guid : Uuidm.t;
+    starting_lba : int64;
+    ending_lba : int64;
+    attributes : int64;
+    name : string;
   }
-  
-  val make : Partition.t list -> (t, string) result
-  
+
+  val make :
+    ?name:string ->
+    type_guid:string ->
+    attributes:int64 ->
+    int64 ->
+    int64 ->
+    (t, string) result
+
   val unmarshal : Cstruct.t -> (t, string) result
-  
   val marshal : Cstruct.t -> t -> unit
-  
+end
+
+type t = {
+  signature : string;
+  revision : int32;
+  header_size : int32;
+  header_crc32 : int32;
+  reserved : int32;
+  current_lba : int64;
+  backup_lba : int64;
+  first_usable_lba : int64;
+  last_usable_lba : int64;
+  disk_guid : Uuidm.t;
+  partition_entry_lba : int64;
+  num_partition_entries : int32;
+  partitions : Partition.t list;
+  partition_size : int32;
+  partitions_crc32 : int32;
+}
+
+val make : Partition.t list -> (t, string) result
+val unmarshal : Cstruct.t -> (t, string) result
+val marshal : Cstruct.t -> t -> unit
