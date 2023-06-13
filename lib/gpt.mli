@@ -43,7 +43,7 @@
     last_usable_lba : int64;
     disk_guid : string;
     partition_entry_lba : int64;
-    num_partition_entries : int;
+    num_partition_entries : int32;
     partitions : Partition.t list;
     partition_size : int32;
     partitions_crc32 : int32;
