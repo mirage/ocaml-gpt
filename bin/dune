@@ -1,2 +1,3 @@
-(executable
- (name main))
+(executables
+ (names gpt_inspect)
+ (libraries gpt cstruct cmdliner unix))
