@@ -19,8 +19,8 @@
 
   module Partition = struct
     type t = {
-      type_guid : string;
-      partition_guid : string;
+      type_guid : Uuidm.t;
+      partition_guid : Uuidm.t;
       starting_lba : int64;
       ending_lba : int64;
       attributes : int64;
@@ -30,10 +30,10 @@
     let make ?(name="") ~type_guid ~attributes starting_lba ending_lba =
       match Uuidm.of_string type_guid with
     | None -> Error (Printf.sprintf "Invalid type_guid: not a valid UUID\n%!")
-    | Some _ ->
-        let partition_guid = Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
+    | Some guid -> 
+        let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
         Ok {
-          type_guid;
+          type_guid = guid;
           partition_guid;
           starting_lba;
           ending_lba;
@@ -57,13 +57,13 @@
       >>= fun () ->
       let type_guid_bytes = Cstruct.sub buf type_guid_offset partition_guid_offset |> Cstruct.to_string in
       let type_guid = match Uuidm.of_mixed_endian_bytes type_guid_bytes with
-          | Some guid -> Ok (Uuidm.to_string ~upper:true guid)
+          | Some guid -> Ok guid
           | None -> Error (Printf.sprintf "Failed to parse the partition type guid; got '%s'" type_guid_bytes)
       in
         type_guid >>= fun type_guid ->
       let partition_guid_bytes = Cstruct.sub buf partition_guid_offset starting_lba_offset |> Cstruct.to_string in
       let partition_guid = match Uuidm.of_mixed_endian_bytes partition_guid_bytes with
-          | Some guid -> Ok (Uuidm.to_string ~upper:true guid)
+          | Some guid -> Ok guid
           | None -> Error (Printf.sprintf "Failed to parse the unique partition guid; got '%s'" type_guid_bytes)
       in
         partition_guid >>= fun partition_guid ->
@@ -82,12 +82,10 @@
       }
   
       let marshal (buf : Cstruct.t) t =
-        let type_guid_bytes =  Bytes.of_string t.type_guid in
-        let partition_guid_bytes =Bytes.of_string t.partition_guid in
         let name_bytes = Bytes.of_string t.name in
         let name_length = min (String.length t.name) 72 in
-        Cstruct.blit (Cstruct.of_bytes type_guid_bytes) 0 buf (type_guid_offset + 1) 16;
-        Cstruct.blit (Cstruct.of_bytes partition_guid_bytes) 0 buf (partition_guid_offset + 1) 16;
+        Cstruct.blit_from_string (Uuidm.to_string t.type_guid) 0 buf (type_guid_offset + 1) 16;
+        Cstruct.blit_from_string (Uuidm.to_string t.partition_guid) 0 buf (partition_guid_offset + 1) 16;
         Cstruct.LE.set_uint64 buf starting_lba_offset t.starting_lba;
         Cstruct.LE.set_uint64 buf ending_lba_offset t.ending_lba;
         Cstruct.LE.set_uint64 buf attributes_offset t.attributes;
@@ -106,7 +104,7 @@ type t = {
   backup_lba : int64;
   first_usable_lba : int64;
   last_usable_lba : int64;
-  disk_guid : string;
+  disk_guid : Uuidm.t;
   partition_entry_lba : int64;
   num_partition_entries : int32;
   partitions : Partition.t list;
@@ -126,7 +124,7 @@ let calculate_header_crc32 header =
       Bytes.of_string (Int64.to_string header.backup_lba);
       Bytes.of_string (Int64.to_string header.first_usable_lba);
       Bytes.of_string (Int64.to_string header.last_usable_lba);
-      Bytes.of_string header.disk_guid;
+      Bytes.of_string (Uuidm.to_string header.disk_guid);
       Bytes.of_string (Int64.to_string header.partition_entry_lba);
       Bytes.of_string (Int32.to_string header.num_partition_entries);
       Bytes.of_string (Int32.to_string header.partitions_crc32);
@@ -140,8 +138,8 @@ let calculate_header_crc32 header =
     List.fold_left (fun crc32 partition ->
       let partition_data =
         Bytes.concat Bytes.empty [
-          Bytes.of_string partition.Partition.type_guid;
-          Bytes.of_string partition.Partition.partition_guid;
+          Bytes.of_string (Uuidm.to_string partition.Partition.type_guid);
+          Bytes.of_string (Uuidm.to_string partition.Partition.partition_guid);
           Bytes.of_string (Int64.to_string partition.Partition.starting_lba);
           Bytes.of_string (Int64.to_string partition.Partition.ending_lba);
           Bytes.of_string (Int64.to_string partition.Partition.attributes);
@@ -180,7 +178,7 @@ let make partitions =
     let first_usable_lba = 0L in
     let last_usable_lba = 0L in
     let partition_entry_lba = 2L in
-    let disk_guid =  Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
+    let disk_guid =  Uuidm.v4_gen (Random.State.make_self_init ()) () in
     let partition_size = Int32.of_int Partition.sizeof in
     let header_size = Int32.of_int sizeof in
     let revision = 0x010000l in
@@ -260,7 +258,7 @@ let unmarshal buf =
         let last_usable_lba = Cstruct.LE.get_uint64 buf last_usable_lba_offset in
         let disk_guid_bytes = Cstruct.sub buf disk_guid_offset partition_entry_lba_offset |> Cstruct.to_string in
         let disk_guid = match Uuidm.of_mixed_endian_bytes disk_guid_bytes with
-          | Some guid -> Ok (Uuidm.to_string ~upper:true guid)
+          | Some guid -> Ok guid
           | None -> Error (Printf.sprintf "Failed to parse disk_guid; got '%s'" disk_guid_bytes)
         in
         disk_guid >>= fun disk_guid ->
@@ -301,7 +299,7 @@ let unmarshal buf =
       Cstruct.LE.set_uint64 buf backup_lba_offset t.backup_lba;
       Cstruct.LE.set_uint64 buf first_usable_lba_offset t.first_usable_lba;
       Cstruct.LE.set_uint64 buf last_usable_lba_offset t.last_usable_lba;
-      Cstruct.blit_from_string t.disk_guid 56 buf disk_guid_offset partition_entry_lba_offset;
+      Cstruct.blit_from_string (Uuidm.to_string t.disk_guid) 56 buf disk_guid_offset partition_entry_lba_offset;
       Cstruct.LE.set_uint64 buf partition_entry_lba_offset t.partition_entry_lba;
       Cstruct.LE.set_uint32 buf num_partition_entries_offset t.num_partition_entries;
       Cstruct.LE.set_uint32 buf partition_size_offset t.partition_size;
