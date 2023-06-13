@@ -13,7 +13,7 @@ let print_gpt_header gpt =
   Printf.printf "  backup-lba: %Ld\n" gpt.Gpt.backup_lba;
   Printf.printf "  first-usable-lba: %Ld\n" gpt.Gpt.first_usable_lba;
   Printf.printf "  last-usable-lba: %Ld\n" gpt.Gpt.last_usable_lba;
-  Printf.printf "  disk-guid: %s\n" gpt.Gpt.disk_guid;
+  Printf.printf "  disk-guid: %s\n" (Uuidm.to_string ~upper:true gpt.Gpt.disk_guid);
   Printf.printf "  first-partition-lba: %Ld\n" gpt.Gpt.partition_entry_lba;
   Printf.printf "  total-partitions: %d\n" (Int32.to_int gpt.Gpt.num_partition_entries);
   Printf.printf "  partition-size: %ld\n" gpt.Gpt.partition_size;
@@ -27,8 +27,8 @@ let print_gpt_partitions partitions =
     (fun i part ->
       Printf.printf "    Partition %d:\n" (i + 1);
       Printf.printf "      name: %s\n" part.Gpt.Partition.name;
-      Printf.printf "      type-guid: %s\n" part.Gpt.Partition.type_guid;
-      Printf.printf "      partition-guid: %s\n" part.Gpt.Partition.partition_guid;
+      Printf.printf "      type-guid: %s\n" (Uuidm.to_string ~upper:true part.Gpt.Partition.type_guid);
+      Printf.printf "      partition-guid: %s\n" (Uuidm.to_string ~upper:true part.Gpt.Partition.partition_guid);
       Printf.printf "      attributes: %Ld\n" part.Gpt.Partition.attributes;
       Printf.printf "      starting-lba: %Ld\n" part.Gpt.Partition.starting_lba;
       Printf.printf "      ending-lba: %Ld\n" part.Gpt.Partition.ending_lba;
