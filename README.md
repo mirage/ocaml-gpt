@@ -33,8 +33,6 @@ dune build @runtest
 This module provides functions for working with GPT partitions.
 ```ocaml
 Partition.make
-go
-Copy code
 val make :
   ?name:string ->
   type_guid:string ->
