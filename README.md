@@ -93,6 +93,18 @@ let create_gpt_disk () =
 
 ```
 
+## Tools
+
+### Inspect the GPT Header: 
+- `gpt_inspect.exe`: This script prints the GPT header and it's corresponding partitions. It enables you inspect your GPT disks.
+
+#### Usage
+```ocaml
+  dune exec -- bin/gpt_inspect.exe disk.img
+```
+
+- `disk.img` corresponds to the disk or disk file image you wish to inspect
+
 ## License
 This libray is licensed with the Ocaml standard ISC license. See here [License](LICENSE)
 
