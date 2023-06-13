@@ -18,7 +18,7 @@ module Testable_partition = struct
       "{ type_guid = %s; partition_guid = %s; starting_lba = %Ld; \
         ending_lba = %Ld; attributes = %Ld; name \
         = %s }"
-      type_guid partition_guid starting_lba ending_lba
+      (Uuidm.to_string type_guid) (Uuidm.to_string partition_guid) starting_lba ending_lba
       attributes name
 
   type t = Gpt.Partition.t
