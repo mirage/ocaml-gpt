@@ -49,22 +49,29 @@
     let ending_lba_offset = 40 (* inclusive, usually odd *)
     let attributes_offset = 48
     let name_offset = 56
-  
+
     let unmarshal buf =
-      (if Cstruct.length buf < sizeof then
+      (if (Cstruct.length buf) < sizeof then
          Error (Printf.sprintf "Partition entry too small: %d < %d" (Cstruct.length buf) sizeof)
        else Ok ())
       >>= fun () ->
-      let buf = Cstruct.sub buf 0 sizeof in
-      let type_guid_bytes = Bytes.sub (Cstruct.to_bytes buf) type_guid_offset 16 in
-      let type_guid =Bytes.to_string type_guid_bytes in
-      let partition_guid_bytes = Bytes.sub ((Bytes.sub (Cstruct.to_bytes buf) partition_guid_offset 16)) 0 16 in
-      let partition_guid = Bytes.to_string partition_guid_bytes in
+      let type_guid_bytes = Cstruct.sub buf type_guid_offset partition_guid_offset |> Cstruct.to_string in
+      let type_guid = match Uuidm.of_mixed_endian_bytes type_guid_bytes with
+          | Some guid -> Ok (Uuidm.to_string ~upper:true guid)
+          | None -> Error (Printf.sprintf "Failed to parse the partition type guid; got '%s'" type_guid_bytes)
+      in
+        type_guid >>= fun type_guid ->
+      let partition_guid_bytes = Cstruct.sub buf partition_guid_offset starting_lba_offset |> Cstruct.to_string in
+      let partition_guid = match Uuidm.of_mixed_endian_bytes partition_guid_bytes with
+          | Some guid -> Ok (Uuidm.to_string ~upper:true guid)
+          | None -> Error (Printf.sprintf "Failed to parse the unique partition guid; got '%s'" type_guid_bytes)
+      in
+        partition_guid >>= fun partition_guid ->
       let starting_lba = Cstruct.LE.get_uint64 buf starting_lba_offset in
       let ending_lba = Cstruct.LE.get_uint64 buf ending_lba_offset in
       let attributes = Cstruct.LE.get_uint64 buf attributes_offset in
-      let name_bytes = Bytes.sub (Cstruct.to_bytes buf) name_offset 72 in
-      let name = Bytes.to_string name_bytes in
+      let name_bytes =Cstruct.sub buf name_offset 72 in
+      let name = Cstruct.to_string name_bytes in
       Ok {
         type_guid;
         partition_guid;
@@ -101,7 +108,7 @@ type t = {
   last_usable_lba : int64;
   disk_guid : string;
   partition_entry_lba : int64;
-  num_partition_entries : int;
+  num_partition_entries : int32;
   partitions : Partition.t list;
   partition_size : int32;
   partitions_crc32 : int32;
@@ -121,7 +128,7 @@ let calculate_header_crc32 header =
       Bytes.of_string (Int64.to_string header.last_usable_lba);
       Bytes.of_string header.disk_guid;
       Bytes.of_string (Int64.to_string header.partition_entry_lba);
-      Bytes.of_string (Int.to_string header.num_partition_entries);
+      Bytes.of_string (Int32.to_string header.num_partition_entries);
       Bytes.of_string (Int32.to_string header.partitions_crc32);
     ]
   in
@@ -151,6 +158,7 @@ let make partitions =
   if num_partition_entries > 128 then 
     Error ((Printf.sprintf "Number of partitions %d exceeds required number %d\n%!") num_partition_entries 128)
   else
+    let num_partition_entries = Int32.of_int num_partition_entries in
     let partitions = 
       List.sort(fun p1 p2 ->
         Int64.unsigned_compare p1.Partition.starting_lba p2.Partition.starting_lba) 
@@ -251,13 +259,13 @@ let unmarshal buf =
         let first_usable_lba = Cstruct.LE.get_uint64 buf first_usable_lba_offset in
         let last_usable_lba = Cstruct.LE.get_uint64 buf last_usable_lba_offset in
         let disk_guid_bytes = Cstruct.sub buf disk_guid_offset partition_entry_lba_offset |> Cstruct.to_string in
-        let disk_guid = match Uuidm.of_bytes disk_guid_bytes with
-          | Some guid -> Ok (Uuidm.to_bytes guid)
+        let disk_guid = match Uuidm.of_mixed_endian_bytes disk_guid_bytes with
+          | Some guid -> Ok (Uuidm.to_string ~upper:true guid)
           | None -> Error (Printf.sprintf "Failed to parse disk_guid; got '%s'" disk_guid_bytes)
         in
         disk_guid >>= fun disk_guid ->
         let partition_entry_lba = Cstruct.LE.get_uint64 buf partition_entry_lba_offset in
-        let num_partition_entries = Cstruct.LE.get_uint32 buf num_partition_entries_offset |> Int32.to_int in
+        let num_partition_entries = Cstruct.LE.get_uint32 buf num_partition_entries_offset in
         let partitions_crc32 = Cstruct.LE.get_uint32 buf partitions_crc32_offset in
         let partition_size = Cstruct.LE.get_uint32 buf partition_size_offset in
         let partitions = [] in
@@ -295,6 +303,6 @@ let unmarshal buf =
       Cstruct.LE.set_uint64 buf last_usable_lba_offset t.last_usable_lba;
       Cstruct.blit_from_string t.disk_guid 56 buf disk_guid_offset partition_entry_lba_offset;
       Cstruct.LE.set_uint64 buf partition_entry_lba_offset t.partition_entry_lba;
-      Cstruct.LE.set_uint32 buf num_partition_entries_offset (Int32.of_int t.num_partition_entries);
+      Cstruct.LE.set_uint32 buf num_partition_entries_offset t.num_partition_entries;
       Cstruct.LE.set_uint32 buf partition_size_offset t.partition_size;
       Cstruct.LE.set_uint32 buf partitions_crc32_offset t.partitions_crc32;
