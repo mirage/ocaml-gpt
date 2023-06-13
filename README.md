@@ -35,7 +35,7 @@ This module provides functions for working with GPT partitions.
 Partition.make
 val make :
   ?name:string ->
-  type_guid:string ->
+  type_guid:Uuidm.t ->
   attributes:int64 ->
   starting_lba:int64 ->
   ending_lba:int64 ->
