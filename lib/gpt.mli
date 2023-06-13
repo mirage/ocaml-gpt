@@ -16,8 +16,8 @@
 
  module Partition : sig
     type t = {
-      type_guid : string;
-      partition_guid : string;
+      type_guid : Uuidm.t;
+      partition_guid : Uuidm.t;
       starting_lba : int64;
       ending_lba : int64;
       attributes : int64;
@@ -41,7 +41,7 @@
     backup_lba : int64;
     first_usable_lba : int64;
     last_usable_lba : int64;
-    disk_guid : string;
+    disk_guid : Uuidm.t;
     partition_entry_lba : int64;
     num_partition_entries : int32;
     partitions : Partition.t list;
