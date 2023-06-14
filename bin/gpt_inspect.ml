@@ -26,15 +26,20 @@ let print_gpt_header gpt =
 let print_gpt_partitions partitions =
   List.iteri
     (fun i part ->
-      Printf.printf "    Partition %d:\n" (i + 1);
-      Printf.printf "      name: %s\n" part.Gpt.Partition.name;
-      Printf.printf "      type-guid: %s\n"
-        (Uuidm.to_string ~upper:true part.Gpt.Partition.type_guid);
-      Printf.printf "      partition-guid: %s\n"
-        (Uuidm.to_string ~upper:true part.Gpt.Partition.partition_guid);
-      Printf.printf "      attributes: %Ld\n" part.Gpt.Partition.attributes;
-      Printf.printf "      starting-lba: %Ld\n" part.Gpt.Partition.starting_lba;
-      Printf.printf "      ending-lba: %Ld\n" part.Gpt.Partition.ending_lba)
+      if
+        Uuidm.to_string part.Gpt.Partition.type_guid
+        <> "00000000-0000-0000-0000-000000000000"
+      then (
+        Printf.printf "    Partition %d:\n" (i + 1);
+        Printf.printf "      name: %s\n" part.Gpt.Partition.name;
+        Printf.printf "      type-guid: %s\n"
+          (Uuidm.to_string ~upper:true part.Gpt.Partition.type_guid);
+        Printf.printf "      partition-guid: %s\n"
+          (Uuidm.to_string ~upper:true part.Gpt.Partition.partition_guid);
+        Printf.printf "      attributes: %Ld\n" part.Gpt.Partition.attributes;
+        Printf.printf "      starting-lba: %Ld\n"
+          part.Gpt.Partition.starting_lba;
+        Printf.printf "      ending-lba: %Ld\n" part.Gpt.Partition.ending_lba))
     partitions
 
 let read_gpts gpts =
