@@ -23,14 +23,18 @@ module Partition = struct
     starting_lba : int64;
     ending_lba : int64;
     attributes : int64;
-    name : string;
+    name : string; (*name should be encoded as a utf-16 string of 72 bytes*)
   }
 
-  let make ?(name = "") ~type_guid ~attributes starting_lba ending_lba =
+  let make ?(name) ~type_guid ~attributes starting_lba ending_lba =
     match Uuidm.of_string type_guid with
     | None -> Error (Printf.sprintf "Invalid type_guid: not a valid UUID\n%!")
     | Some guid ->
+      let name = Option.get name in
         let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
+        (if String.length name > 72 then
+          Error (Printf.sprintf "Name length %d should be less than or equal to 72\n" (String.length name))
+        else Ok ()) >>= fun () ->
         Ok
           {
             type_guid = guid;
@@ -39,7 +43,7 @@ module Partition = struct
             ending_lba;
             attributes;
             name;
-          }
+          } 
 
   (** extracted from https://en.m.wikipedia.org/wiki/GUID_Partition_Table **)
 
@@ -93,8 +97,10 @@ module Partition = struct
     Ok { type_guid; partition_guid; starting_lba; ending_lba; attributes; name }
 
   let marshal (buf : Cstruct.t) t =
-    let name_bytes = Bytes.of_string t.name in
-    let name_length = min (String.length t.name) 72 in
+    let name_buf = Cstruct.create 72 in
+    let name_struct = Cstruct.of_string t.name in
+    let name_length = min (Cstruct.length name_buf) (Cstruct.length name_struct) in
+    Cstruct.blit_from_string t.name 0 name_buf 0 name_length;
     Cstruct.blit_from_string
       (Uuidm.to_string t.type_guid)
       0 buf (type_guid_offset + 1) 16;
@@ -106,7 +112,7 @@ module Partition = struct
     Cstruct.LE.set_uint64 buf starting_lba_offset t.starting_lba;
     Cstruct.LE.set_uint64 buf ending_lba_offset t.ending_lba;
     Cstruct.LE.set_uint64 buf attributes_offset t.attributes;
-    Cstruct.blit (Cstruct.of_bytes name_bytes) 0 buf name_offset name_length
+    Cstruct.blit name_buf 0 buf name_offset 72
 end
 
 (* GPT header from wikipedia https://en.m.wikipedia.org/wiki/GUID_Partition_Table *)
@@ -172,14 +178,18 @@ let calculate_partition_crc32 partitions =
       result)
     Checkseum.Crc32.default partitions
 
-let make partitions =
-  let num_partition_entries = List.length partitions in
-  if num_partition_entries > 128 then
+let table_sectors_required num_partition_entries sector_size = 
+  (((num_partition_entries * sizeof) + sector_size - 1) /sector_size)
+let make ?(disk_guid) ~disk_size ~sector_size partitions =
+  let num_partition_entries = 128 in
+  let num_actual_partition_entries = List.length partitions in
+  if num_actual_partition_entries > num_partition_entries then
     Error
       ((Printf.sprintf "Number of partitions %d exceeds required number %d\n%!")
-         num_partition_entries 128)
+        num_actual_partition_entries num_partition_entries)
   else
-    let num_partition_entries = Int32.of_int num_partition_entries in
+    
+    let partition_table_sectors = table_sectors_required num_partition_entries sector_size in
     let partitions =
       List.sort
         (fun p1 p2 ->
@@ -197,16 +207,17 @@ let make partitions =
       (Ok 1L) partitions
     >>= fun (_ : int64) ->
     let current_lba = 1L in
-    let backup_lba = 0L in
-    let first_usable_lba = 0L in
-    let last_usable_lba = 0L in
+    let backup_lba = Int64.sub disk_size 1L in
+    let last_usable_lba = Int64.sub backup_lba 1L in
     let partition_entry_lba = 2L in
-    let disk_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
+    let first_usable_lba = Int64.add (Int64.sub ((Int64.add (Int64.of_int partition_table_sectors) partition_entry_lba)) 1L) 1L in
+    let disk_guid = Option.value disk_guid ~default:(Uuidm.v4_gen (Random.State.make_self_init ()) ()) in
     let partition_size = Int32.of_int Partition.sizeof in
     let header_size = Int32.of_int sizeof in
     let revision = 0x010000l in
     let signature = "EFI PART" in
     let reserved = 0l in
+    let num_partition_entries = Int32.of_int num_partition_entries in
     let partitions_crc32 =
       Optint.to_int32 (calculate_partition_crc32 partitions)
     in
@@ -266,7 +277,7 @@ let num_partition_entries_offset = 80
 let partition_size_offset = 84
 let partitions_crc32_offset = 88
 
-let unmarshal buf =
+let unmarshal buf ~sector_size =
   if Cstruct.length buf < sizeof then
     Error (Printf.sprintf "GPT too small: %d < %d" (Cstruct.length buf) sizeof)
   else
@@ -313,7 +324,22 @@ let unmarshal buf =
           let partition_size =
             Cstruct.LE.get_uint32 buf partition_size_offset
           in
-          let partitions = [] in
+          let partition_buf = Cstruct.create ((Int32.to_int partition_size) * (Int32.to_int num_partition_entries)) in
+          Cstruct.blit buf ((Int64.to_int partition_entry_lba) * sector_size) partition_buf 0 (Cstruct.length partition_buf);
+          let partition_entries = ref [] in
+          for i = 0 to Int32.to_int num_partition_entries - 1 do
+            let partition_entry_offset = i * Int32.to_int partition_size in
+            let partition_entry_buf =
+              Cstruct.sub
+                partition_buf
+                partition_entry_offset
+                (Int32.to_int partition_size)
+            in
+            match Partition.unmarshal partition_entry_buf with
+            | Ok entry -> partition_entries := entry :: !partition_entries
+            | Error e -> Printf.printf "An error occurred: %s\n" e
+          done;
+          let partitions = List.rev !partition_entries in
           Ok
             {
               signature;
