@@ -277,7 +277,7 @@ let num_partition_entries_offset = 80
 let partition_size_offset = 84
 let partitions_crc32_offset = 88
 
-let unmarshal buf ~sector_size =
+let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is protective MBR*)
   if Cstruct.length buf < sizeof then
     Error (Printf.sprintf "GPT too small: %d < %d" (Cstruct.length buf) sizeof)
   else
