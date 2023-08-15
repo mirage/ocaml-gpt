@@ -46,7 +46,7 @@ let test_make_partition_wrong_type_guid () =
   | Ok _ -> Alcotest.fail "Expected an invalid type_uuid error"
 
 let test_make_gpt_no_partitions () =
-  match Gpt.make [] with
+  match Gpt.make ~disk_size:1024L ~sector_size:512 [] with
   | Ok _ -> ()
   | Error e -> Alcotest.failf "Expected Ok, got %s" e
 
@@ -65,7 +65,7 @@ let test_make_gpt_too_many_partitions () =
         | Ok p -> p
         | Error _ -> Alcotest.fail "Expected Ok")
   in
-  match Gpt.make (Array.to_list partitions) with
+  match Gpt.make ~disk_size:1024L ~sector_size:512 (Array.to_list partitions) with
   | Ok _ -> Alcotest.fail "Expected too many partitons error"
   | Error _ -> ()
 
@@ -80,7 +80,7 @@ let test_make_gpt_overlapping_partitions () =
       (Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
          ~name:"Partition 1" ~attributes:255L 3048L 4096L)
   in
-  match (Gpt.make [ p1; p2 ], Gpt.make [ p2; p1 ]) with
+  match (Gpt.make ~disk_size:1024L ~sector_size:512 [ p1; p2 ], Gpt.make ~disk_size:1024L ~sector_size:512 [ p2; p1 ]) with
   | Ok _, _ | _, Ok _ -> Alcotest.fail "Expected overlapping error"
   | Error _, Error _ -> ()
 
@@ -95,8 +95,8 @@ let test_make_gpt_sorted_partitions () =
       (Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
          ~name:"Partition 2" ~attributes:255L 4096L 1L)
   in
-  let m1 = get_ok (Gpt.make [ p1; p2 ]) in
-  let m2 = get_ok (Gpt.make [ p2; p1 ]) in
+  let m1 = get_ok (Gpt.make ~disk_size:1024L ~sector_size:512 [ p1; p2 ]) in
+  let m2 = get_ok (Gpt.make ~disk_size:1024L ~sector_size:512 [ p2; p1 ]) in
   (* polymorphic compare :`( *)
   Alcotest.(
     check (list partition) "partitons equal" m1.partitions m2.partitions)
