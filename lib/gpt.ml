@@ -382,4 +382,10 @@ let marshal (buf : Cstruct.t) t =
   Cstruct.LE.set_uint64 buf partition_entry_lba_offset t.partition_entry_lba;
   Cstruct.LE.set_uint32 buf num_partition_entries_offset t.num_partition_entries;
   Cstruct.LE.set_uint32 buf partition_size_offset t.partition_size;
-  Cstruct.LE.set_uint32 buf partitions_crc32_offset t.partitions_crc32
+  Cstruct.LE.set_uint32 buf partitions_crc32_offset t.partitions_crc32;
+  List.iteri
+    (fun i p ->
+      Partition.marshal
+        (Cstruct.sub buf (i * Int32.to_int t.partition_size) Partition.sizeof)
+        p)
+    t.partitions
