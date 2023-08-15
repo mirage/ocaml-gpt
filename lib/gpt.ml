@@ -325,7 +325,7 @@ let unmarshal buf ~sector_size =
             Cstruct.LE.get_uint32 buf partition_size_offset
           in
           let partition_buf = Cstruct.create ((Int32.to_int partition_size) * (Int32.to_int num_partition_entries)) in
-          Cstruct.blit buf ((Int64.to_int partition_entry_lba) * sector_size) partition_buf 0 (Cstruct.length partition_buf);
+          Cstruct.blit buf sector_size partition_buf 0 (Cstruct.length partition_buf);
           let partition_entries = ref [] in
           for i = 0 to Int32.to_int num_partition_entries - 1 do
             let partition_entry_offset = i * Int32.to_int partition_size in
