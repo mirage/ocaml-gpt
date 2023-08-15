@@ -47,9 +47,9 @@ let read_gpts gpts =
   List.iter
     (fun gpt ->
       let ic = open_in_bin gpt in
-      let buf = Bytes.create 18000 in
+      let buf = Bytes.create 17408 in
       let () = seek_in ic 512 in
-      let () = really_input ic buf 0 18000 in
+      let () = really_input ic buf 0 17408 in
       close_in ic;
       match Gpt.unmarshal (Cstruct.of_bytes buf) ~sector_size:512 with
       | Ok gpt ->
