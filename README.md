@@ -41,7 +41,7 @@ val make :
   ending_lba:int64 ->
   (Partition.t, string) result
 ```
-This function creates a new GPT partition with the specified parameters. It returns a `Partition.t` value wrapped in the Result type, indicating success or failure.
+This function creates a new GPT partition with the specified parameters. It returns a `Partition.t` value wrapped in the Result type, indicating success or failure. `name` should be a `utf-16-le` encoded string of length 72 bytes.
 
 #### Partition.unmarshal
 ```ocaml
@@ -61,13 +61,14 @@ This module provides functions for working with GPT headers.
 
 #### Gpt.make
 ```ocaml
-val make : Partition.t list -> (t, string) result
+val make :  ?disk_guid:Uuidm.t -> disk_size:int64 
+            -> sector_size:int ->  Partition.t list -> (t, string) result
 ```
 This function creates a new GPT header with the specified list of partitions. It returns a `Gpt.t` value wrapped in the Result type, indicating success or failure.
 
 #### Gpt.unmarshal
 ```ocaml
-val unmarshal : Cstruct.t -> (t, string) result
+val unmarshal : Cstruct.t -> sector_size:int -> (t, string) result
 ```
 This function takes a `Cstruct.t` buffer and unmarshals the data into a `Gpt.t` value. It returns the unmarshalled GPT header wrapped in the Result type, indicating success or failure.
 
@@ -81,13 +82,13 @@ This function marshals a `Gpt.t` value into a `Cstruct.t` buffer.
 Here's an example of how you can use this library to create and manipulate GPT headers and partitions:
 
 ```ocaml
-let create_gpt_disk () =
+let create_gpt_header () =
   let partition1 = Match Partition.make ~name:"Partition 1" ~type_guid:"12345678-1234-1234-1234-123456789abc" ~attributes:0L 1L 100L
   with 
   | Ok p -> p
   | Error error -> Printf.eprintf "Error %s" error
   in
-  match make [partition1] with
+  match make [partition1] ~disk_size:1024L ~sector_size:512 with
   | Ok gpt -> gpt
   | Error error -> Printf.eprintf "Error %s" error
 
