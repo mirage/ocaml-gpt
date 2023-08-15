@@ -54,6 +54,6 @@ type t = {
   partitions_crc32 : int32;
 }
 
-val make : Partition.t list -> (t, string) result
-val unmarshal : Cstruct.t -> (t, string) result
+val make :  ?disk_guid:Uuidm.t -> disk_size:int64 -> sector_size:int ->  Partition.t list -> (t, string) result
+val unmarshal : Cstruct.t -> sector_size:int -> (t, string) result
 val marshal : Cstruct.t -> t -> unit
