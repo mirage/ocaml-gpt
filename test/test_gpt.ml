@@ -30,20 +30,13 @@ let partition =
   (module Testable_partition : Alcotest.TESTABLE with type t = Gpt.Partition.t)
 
 let test_make_partition () =
+  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
   match
-    Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
+    Gpt.Partition.make ~type_guid
       ~name:"Test Partition" ~attributes:255L 2048L 4096L
   with
   | Ok partition -> ignore partition
   | Error error -> Alcotest.failf "Error creating partition: %s" error
-
-let test_make_partition_wrong_type_guid () =
-  match
-    Gpt.Partition.make ~type_guid:"012345678" ~name:"Test Partition"
-      ~attributes:255L 2048L 4096L
-  with
-  | Error _ -> ()
-  | Ok _ -> Alcotest.fail "Expected an invalid type_uuid error"
 
 let test_make_gpt_no_partitions () =
   match Gpt.make ~disk_size:1024L ~sector_size:512 [] with
@@ -51,11 +44,12 @@ let test_make_gpt_no_partitions () =
   | Error e -> Alcotest.failf "Expected Ok, got %s" e
 
 let test_make_gpt_too_many_partitions () =
+  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
   let num_partitions = 129 in
   let partitions =
     Array.init num_partitions (fun i ->
         let partition =
-          Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
+          Gpt.Partition.make ~type_guid
             ~name:(Printf.sprintf "Partition %d" (i + 1))
             ~attributes:255L
             (Int64.of_int (i * 2048))
@@ -70,14 +64,15 @@ let test_make_gpt_too_many_partitions () =
   | Error _ -> ()
 
 let test_make_gpt_overlapping_partitions () =
+  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
   let p1 =
     get_ok
-      (Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
+      (Gpt.Partition.make ~type_guid
          ~name:"Partition 1" ~attributes:255L 2048L 4096L)
   in
   let p2 =
     get_ok
-      (Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
+      (Gpt.Partition.make ~type_guid
          ~name:"Partition 1" ~attributes:255L 3048L 4096L)
   in
   match (Gpt.make ~disk_size:1024L ~sector_size:512 [ p1; p2 ], Gpt.make ~disk_size:1024L ~sector_size:512 [ p2; p1 ]) with
@@ -85,14 +80,15 @@ let test_make_gpt_overlapping_partitions () =
   | Error _, Error _ -> ()
 
 let test_make_gpt_sorted_partitions () =
+  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
   let p1 =
     get_ok
-      (Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
+      (Gpt.Partition.make ~type_guid
          ~name:"Partition 1" ~attributes:255L 2048L 1L)
   in
   let p2 =
     get_ok
-      (Gpt.Partition.make ~type_guid:"12345678-1234-1234-1234-123456789abc"
+      (Gpt.Partition.make ~type_guid
          ~name:"Partition 2" ~attributes:255L 4096L 1L)
   in
   let m1 = get_ok (Gpt.make ~disk_size:1024L ~sector_size:512 [ p1; p2 ]) in
@@ -104,7 +100,6 @@ let test_make_gpt_sorted_partitions () =
 let partition_test_collection =
   [
     ("correct-partition", `Quick, test_make_partition);
-    ("wrong-type_guid", `Quick, test_make_partition_wrong_type_guid);
   ]
 
 let gpt_header_test_collection =

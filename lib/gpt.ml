@@ -27,16 +27,13 @@ module Partition = struct
   }
 
   let make ?(name =  String.of_bytes(Bytes.create 72)) ~type_guid ~attributes starting_lba ending_lba =
-    match Uuidm.of_string type_guid with
-    | None -> Error (Printf.sprintf "Invalid type_guid: not a valid UUID\n%!")
-    | Some guid ->
       let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
       (if String.length name > 72 then
         Error (Printf.sprintf "Name length %d should be less than or equal to 72\n" (String.length name))
       else Ok ()) >>= fun () ->
       Ok
         {
-          type_guid = guid;
+          type_guid;
           partition_guid;
           starting_lba;
           ending_lba;
