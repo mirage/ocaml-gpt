@@ -15,7 +15,7 @@
  *)
 
 module Partition : sig
-  type t = {
+  type t = private {
     type_guid : Uuidm.t;
     partition_guid : Uuidm.t;
     starting_lba : int64;
@@ -36,7 +36,7 @@ module Partition : sig
   val marshal : Cstruct.t -> t -> unit
 end
 
-type t = {
+type t = private {
   signature : string;
   revision : int32;
   header_size : int32;
