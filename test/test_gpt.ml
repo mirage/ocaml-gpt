@@ -44,7 +44,7 @@ let test_make_gpt_no_partitions () =
   | Error e -> Alcotest.failf "Expected Ok, got %s" e
 
 let test_make_gpt_too_many_partitions () =
-  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
   let num_partitions = 129 in
   let partitions =
     Array.init num_partitions (fun i ->
@@ -64,7 +64,7 @@ let test_make_gpt_too_many_partitions () =
   | Error _ -> ()
 
 let test_make_gpt_overlapping_partitions () =
-  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
   let p1 =
     get_ok
       (Gpt.Partition.make ~type_guid
@@ -80,7 +80,7 @@ let test_make_gpt_overlapping_partitions () =
   | Error _, Error _ -> ()
 
 let test_make_gpt_sorted_partitions () =
-  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
   let p1 =
     get_ok
       (Gpt.Partition.make ~type_guid
