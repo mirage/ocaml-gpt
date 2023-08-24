@@ -64,7 +64,7 @@ type t = private {
 }
 
 val make :  ?disk_guid:Uuidm.t -> disk_size:int64 -> sector_size:int ->  Partition.t list -> (t, string) result
-(* [make ?disk_guid disk_size sector_size partitions] constructs a GPT given a desired list of
+(* [make ?disk_guid ~disk_size ~sector_size partitions] constructs a GPT given a desired list of
      partitions. An [Error _] is returned if:
 
     - The number of partitions exceeds 128,
