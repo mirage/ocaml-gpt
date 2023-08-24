@@ -34,7 +34,7 @@ module Partition : sig
     int64 ->
     int64 ->
     (t, string) result
-  (* [make ?name type_guid attributes starting_lba ending_lba] constructs a Partition.t
+  (* [make ?name ~type_guid ~attributes starting_lba ending_lba] constructs a Partition.t
       An [Error _] is returned if:
         - the length of name not 72 bytes
   *)
