@@ -30,7 +30,7 @@ let partition =
   (module Testable_partition : Alcotest.TESTABLE with type t = Gpt.Partition.t)
 
 let test_make_partition () =
-  let type_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in 
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in 
   match
     Gpt.Partition.make ~type_guid
       ~name:"Test Partition" ~attributes:255L 2048L 4096L
