@@ -26,7 +26,7 @@ module Partition = struct
     name : string; (*name should be encoded as a utf-16 string of 72 bytes*)
   }
 
-  let make ?(name =  String.of_bytes(Bytes.create 72)) ~type_guid ~attributes starting_lba ending_lba =
+  let make ?(name =  String.make 72 '\000') ~type_guid ~attributes starting_lba ending_lba =
     match Uuidm.of_string type_guid with
     | None -> Error (Printf.sprintf "Invalid type_guid: not a valid UUID\n%!")
     | Some guid ->
