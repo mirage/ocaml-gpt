@@ -46,7 +46,6 @@ module Partition : sig
 end
 
 type t = private {
-  signature : string;
   revision : int32;
   header_size : int32;
   header_crc32 : int32;

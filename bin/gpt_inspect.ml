@@ -23,7 +23,6 @@ let print_gpt_partitions partitions =
 
 let print_gpt_header gpt =
   Printf.printf "GPT header:\n";
-  Printf.printf "  signature: %s\n" gpt.Gpt.signature;
   Printf.printf "  revision: 0x%08lx\n" gpt.Gpt.revision;
   Printf.printf "  gpt-size: %ld\n" gpt.Gpt.header_size;
   Printf.printf "  gpt-checksum: %ld\n" gpt.Gpt.header_crc32;
