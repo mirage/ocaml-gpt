@@ -27,22 +27,19 @@ module Partition = struct
   }
 
   let make ?(name =  String.make 72 '\000') ~type_guid ~attributes starting_lba ending_lba =
-    match Uuidm.of_string type_guid with
-    | None -> Error (Printf.sprintf "Invalid type_guid: not a valid UUID\n%!")
-    | Some guid ->
-      let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
-      (if String.length name > 72 then
-        Error (Printf.sprintf "Name length %d should be less than or equal to 72\n" (String.length name))
-      else Ok ()) >>= fun () ->
-      Ok
-        {
-          type_guid;
-          partition_guid;
-          starting_lba;
-          ending_lba;
-          attributes;
-          name;
-        } 
+    let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
+    (if String.length name > 72 then
+       Error (Printf.sprintf "Name length %d should be less than or equal to 72\n" (String.length name))
+     else Ok ()) >>= fun () ->
+    Ok
+      {
+        type_guid;
+        partition_guid;
+        starting_lba;
+        ending_lba;
+        attributes;
+        name;
+      }
 
   (** extracted from https://en.m.wikipedia.org/wiki/GUID_Partition_Table **)
 
