@@ -73,6 +73,6 @@ val make :  ?disk_guid:Uuidm.t -> disk_size:int64 -> sector_size:int ->  Partiti
     The optional argument [disk_guid] specifies the disk guid to be
     written in the GPT. If [disk_guid] is not provided, a default value
     is created using the Uuidm library. *)
-val unmarshal : Cstruct.t -> sector_size:int -> (t, string) result 
+val unmarshal : Cstruct.t -> sector_size:int -> (t, string) result
 (* [unmarshal buf] buf should be  all of sector 2 to sector 34. Sector 1 is the protective MBR*)
 val marshal : Cstruct.t -> t -> unit
