@@ -74,4 +74,7 @@ val make :  ?disk_guid:Uuidm.t -> disk_size:int64 -> sector_size:int ->  Partiti
     is created using the Uuidm library. *)
 val unmarshal : Cstruct.t -> sector_size:int -> (t, string) result
 (* [unmarshal buf] buf should be  all of sector 2 to sector 34. Sector 1 is the protective MBR*)
-val marshal : Cstruct.t -> t -> unit
+
+val marshal_header : sector_size:int -> Cstruct.t -> t -> unit
+
+val marshal_partition_table : Cstruct.t -> t -> unit

@@ -359,7 +359,9 @@ let unmarshal buf ~sector_size =
       partitions_crc32;
     }
 
-let marshal (buf : Cstruct.t) t =
+let marshal_header ~sector_size (buf : Cstruct.t) t =
+  if Cstruct.length buf < sector_size || Cstruct.length buf < sizeof then
+    invalid_arg "Gpt.marshal_header";
   Cstruct.blit_from_string signature 0 buf signature_offset revision_offset;
   Cstruct.LE.set_uint32 buf revision_offset t.revision;
   Cstruct.LE.set_uint32 buf header_size_offset t.header_size;
@@ -376,6 +378,9 @@ let marshal (buf : Cstruct.t) t =
   Cstruct.LE.set_uint32 buf num_partition_entries_offset t.num_partition_entries;
   Cstruct.LE.set_uint32 buf partition_size_offset t.partition_size;
   Cstruct.LE.set_uint32 buf partitions_crc32_offset t.partitions_crc32;
+  Cstruct.memset (Cstruct.sub buf sizeof (sector_size - sizeof)) 0
+
+let marshal_partition_table (buf : Cstruct.t) t =
   List.iteri
     (fun i p ->
       Partition.marshal
