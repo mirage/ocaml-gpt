@@ -113,7 +113,6 @@ end
 
 (* GPT header from wikipedia https://en.m.wikipedia.org/wiki/GUID_Partition_Table *)
 type t = {
-  signature : string;
   revision : int32;
   header_size : int32;
   header_crc32 : int32;
@@ -130,11 +129,13 @@ type t = {
   partitions_crc32 : int32;
 }
 
+let signature = "EFI PART"
+
 let calculate_header_crc32 header =
   let header_bytes =
     Bytes.concat Bytes.empty
       [
-        Bytes.of_string header.signature;
+        Bytes.of_string signature;
         Bytes.of_string (Int32.to_string header.revision);
         Bytes.of_string (Int32.to_string header.header_size);
         Bytes.of_string (Int32.to_string header.header_crc32);
@@ -211,7 +212,6 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
     let partition_size = Int32.of_int Partition.sizeof in
     let header_size = Int32.of_int sizeof in
     let revision = 0x010000l in
-    let signature = "EFI PART" in
     let reserved = 0l in
     let num_partition_entries = Int32.of_int num_partition_entries in
     let partitions_crc32 =
@@ -220,7 +220,6 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
     let header_crc32 =
       let header =
         {
-          signature;
           revision;
           header_size;
           header_crc32 = 0l;
@@ -241,7 +240,6 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
     in
     Ok
       {
-        signature;
         revision;
         header_size;
         header_crc32;
@@ -338,7 +336,6 @@ let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is
           let partitions = List.rev !partition_entries in
           Ok
             {
-              signature;
               revision;
               header_size;
               header_crc32;
@@ -363,7 +360,7 @@ let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is
           (Printf.sprintf "Signature not found; expected 'EFI PART', got '%s'" x)
 
 let marshal (buf : Cstruct.t) t =
-  Cstruct.blit_from_string t.signature 0 buf signature_offset revision_offset;
+  Cstruct.blit_from_string signature 0 buf signature_offset revision_offset;
   Cstruct.LE.set_uint32 buf revision_offset t.revision;
   Cstruct.LE.set_uint32 buf header_size_offset t.header_size;
   Cstruct.LE.set_uint32 buf header_crc32_offset t.header_crc32;
