@@ -16,6 +16,8 @@
 let ( >>= ) = Result.bind
 let sizeof = 128
 
+let guid_len = 16
+
 module Partition = struct
   type t = {
     type_guid : Uuidm.t;
@@ -59,7 +61,7 @@ module Partition = struct
     else Ok ())
     >>= fun () ->
     let type_guid_bytes =
-      Cstruct.sub buf type_guid_offset partition_guid_offset
+      Cstruct.sub buf type_guid_offset guid_len
       |> Cstruct.to_string
     in
     let type_guid =
@@ -72,7 +74,7 @@ module Partition = struct
     in
     type_guid >>= fun type_guid ->
     let partition_guid_bytes =
-      Cstruct.sub buf partition_guid_offset starting_lba_offset
+      Cstruct.sub buf partition_guid_offset guid_len
       |> Cstruct.to_string
     in
     let partition_guid =
@@ -175,7 +177,7 @@ let calculate_partition_crc32 partitions =
       result)
     Checkseum.Crc32.default partitions
 
-let table_sectors_required num_partition_entries sector_size = 
+let table_sectors_required num_partition_entries sector_size =
   (((num_partition_entries * sizeof) + sector_size - 1) /sector_size)
 let make ?(disk_guid) ~disk_size ~sector_size partitions =
   let num_partition_entries = 128 in
@@ -185,7 +187,6 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
       ((Printf.sprintf "Number of partitions %d exceeds required number %d\n%!")
         num_actual_partition_entries num_partition_entries)
   else
-    
     let partition_table_sectors = table_sectors_required num_partition_entries sector_size in
     let partitions =
       List.sort
@@ -217,32 +218,11 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
     let partitions_crc32 =
       Optint.to_int32 (calculate_partition_crc32 partitions)
     in
-    let header_crc32 =
-      let header =
-        {
-          revision;
-          header_size;
-          header_crc32 = 0l;
-          reserved;
-          current_lba;
-          backup_lba;
-          first_usable_lba;
-          last_usable_lba;
-          disk_guid;
-          partition_entry_lba;
-          num_partition_entries;
-          partitions;
-          partition_size;
-          partitions_crc32;
-        }
-      in
-      Optint.to_int32 (calculate_header_crc32 header)
-    in
-    Ok
+    let header =
       {
         revision;
         header_size;
-        header_crc32;
+        header_crc32 = 0l;
         reserved;
         current_lba;
         backup_lba;
@@ -255,8 +235,13 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
         partition_size;
         partitions_crc32;
       }
+    in
+    let header_crc32 = Optint.to_int32 (calculate_header_crc32 header) in
+    Ok { header with header_crc32 }
+
 
 let signature_offset = 0
+let signature_len = 8
 let revision_offset = 8
 let header_size_offset = 12
 let header_crc32_offset = 16
@@ -276,7 +261,7 @@ let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is
     Error (Printf.sprintf "GPT too small: %d < %d" (Cstruct.length buf) sizeof)
   else
     let signature =
-      Cstruct.sub buf signature_offset revision_offset |> Cstruct.to_string
+      Cstruct.sub buf signature_offset signature_len |> Cstruct.to_string
     in
     match signature with
     | "EFI PART" ->
@@ -294,7 +279,7 @@ let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is
             Cstruct.LE.get_uint64 buf last_usable_lba_offset
           in
           let disk_guid_bytes =
-            Cstruct.sub buf disk_guid_offset partition_entry_lba_offset
+            Cstruct.sub buf disk_guid_offset guid_len
             |> Cstruct.to_string
           in
           let disk_guid =
