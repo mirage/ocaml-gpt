@@ -72,9 +72,14 @@ val make :  ?disk_guid:Uuidm.t -> disk_size:int64 -> sector_size:int ->  Partiti
     The optional argument [disk_guid] specifies the disk guid to be
     written in the GPT. If [disk_guid] is not provided, a default value
     is created using the Uuidm library. *)
-val unmarshal : Cstruct.t -> sector_size:int -> (t, string) result
-(* [unmarshal buf] buf should be  all of sector 2 to sector 34. Sector 1 is the protective MBR*)
+
+val unmarshal : Cstruct.t -> sector_size:int ->
+  ([ `Read_partition_table of int64 * int ] * (Cstruct.t -> (t, string) result) , string) result
+(* [unmarshal ~sector_size buf] on success is a pair [(`Read_partition (lba, num_sectors), k)]
+   where lba is the logical block address (sector) to read [num_sectors]
+   sectors of the partition table. The bytes read should then be passed to [k]
+   which then on success returns the GPT header and the partition table. *)
 
 val marshal_header : sector_size:int -> Cstruct.t -> t -> unit
 
-val marshal_partition_table : Cstruct.t -> t -> unit
+val marshal_partition_table : sector_size:int -> Cstruct.t -> t -> unit

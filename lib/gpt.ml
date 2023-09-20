@@ -325,39 +325,51 @@ let unmarshal buf ~sector_size =
   let partition_size =
     Cstruct.LE.get_uint32 buf partition_size_offset
   in
-  let partition_buf = Cstruct.create ((Int32.to_int partition_size) * (Int32.to_int num_partition_entries)) in
-  Cstruct.blit buf sector_size partition_buf 0 (Cstruct.length partition_buf);
-  let partition_entries = ref [] in
-  for i = 0 to Int32.to_int num_partition_entries - 1 do
-    let partition_entry_offset = i * Int32.to_int partition_size in
-    let partition_entry_buf =
-      Cstruct.sub
-        partition_buf
-        partition_entry_offset
-        (Int32.to_int partition_size)
-    in
-    match Partition.unmarshal partition_entry_buf with
-    | Ok entry -> partition_entries := entry :: !partition_entries
-    | Error e -> Printf.printf "An error occurred: %s\n" e
-  done;
-  let partitions = List.rev !partition_entries in
-  Ok
-    {
-      revision;
-      header_size;
-      header_crc32;
-      reserved;
-      current_lba;
-      backup_lba;
-      first_usable_lba;
-      last_usable_lba;
-      disk_guid;
-      partition_entry_lba;
-      num_partition_entries;
-      partitions;
-      partition_size;
-      partitions_crc32;
-    }
+  (* let's not try to parse partition entries with a size we don't understand *)
+  let* () =
+    if partition_size <> Int32.of_int Partition.sizeof then
+      Error (Printf.sprintf "Unexpected partition size: %lu" partition_size)
+    else Ok ()
+  in
+  let partition_entry_sectors =
+    (Int32.to_int num_partition_entries * Partition.sizeof + sector_size - 1) / sector_size
+  in
+  Ok (`Read_partition_table (partition_entry_lba, partition_entry_sectors),
+      fun buf ->
+        let* () =
+          if Cstruct.length buf < Int32.to_int num_partition_entries * Partition.sizeof then
+            Error "partition table buffer too small"
+          else Ok ()
+        in
+        let* rev_partitions =
+          List.fold_left
+            (fun acc buf ->
+               let* acc = acc in
+               let* entry = Partition.unmarshal buf in
+               Ok (entry :: acc))
+            (Ok [])
+            (List.init
+               (Int32.to_int num_partition_entries)
+               (fun i -> Cstruct.sub buf (i * Partition.sizeof) Partition.sizeof))
+        in
+        let partitions = List.rev rev_partitions in
+        Ok
+          {
+            revision;
+            header_size;
+            header_crc32;
+            reserved;
+            current_lba;
+            backup_lba;
+            first_usable_lba;
+            last_usable_lba;
+            disk_guid;
+            partition_entry_lba;
+            num_partition_entries;
+            partitions;
+            partition_size;
+            partitions_crc32;
+          })
 
 let marshal_header ~sector_size (buf : Cstruct.t) t =
   if Cstruct.length buf < sector_size || Cstruct.length buf < sizeof then
@@ -380,10 +392,17 @@ let marshal_header ~sector_size (buf : Cstruct.t) t =
   Cstruct.LE.set_uint32 buf partitions_crc32_offset t.partitions_crc32;
   Cstruct.memset (Cstruct.sub buf sizeof (sector_size - sizeof)) 0
 
-let marshal_partition_table (buf : Cstruct.t) t =
+let marshal_partition_table ~sector_size (buf : Cstruct.t) t =
+  if Cstruct.length buf < Int32.to_int t.num_partition_entries * Partition.sizeof then
+    invalid_arg "Gpt.marshal_partition_table";
+  if Cstruct.length buf mod sector_size <> 0 then
+    invalid_arg "Gpt.marshal_partition_table";
   List.iteri
     (fun i p ->
       Partition.marshal
         (Cstruct.sub buf (i * Int32.to_int t.partition_size) Partition.sizeof)
         p)
-    t.partitions
+    t.partitions;
+  Cstruct.memset
+    (Cstruct.shift buf (Int32.to_int t.num_partition_entries * Partition.sizeof))
+    0
