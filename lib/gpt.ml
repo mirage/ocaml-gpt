@@ -16,6 +16,8 @@
 let ( >>= ) = Result.bind
 let sizeof = 128
 
+let guid_len = 16
+
 module Partition = struct
   type t = {
     type_guid : Uuidm.t;
@@ -59,7 +61,7 @@ module Partition = struct
     else Ok ())
     >>= fun () ->
     let type_guid_bytes =
-      Cstruct.sub buf type_guid_offset partition_guid_offset
+      Cstruct.sub buf type_guid_offset guid_len
       |> Cstruct.to_string
     in
     let type_guid =
@@ -72,7 +74,7 @@ module Partition = struct
     in
     type_guid >>= fun type_guid ->
     let partition_guid_bytes =
-      Cstruct.sub buf partition_guid_offset starting_lba_offset
+      Cstruct.sub buf partition_guid_offset guid_len
       |> Cstruct.to_string
     in
     let partition_guid =
@@ -240,6 +242,7 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
 
 
 let signature_offset = 0
+let signature_len = 8
 let revision_offset = 8
 let header_size_offset = 12
 let header_crc32_offset = 16
@@ -259,7 +262,7 @@ let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is
     Error (Printf.sprintf "GPT too small: %d < %d" (Cstruct.length buf) sizeof)
   else
     let signature =
-      Cstruct.sub buf signature_offset revision_offset |> Cstruct.to_string
+      Cstruct.sub buf signature_offset signature_len |> Cstruct.to_string
     in
     match signature with
     | "EFI PART" ->
@@ -277,7 +280,7 @@ let unmarshal buf ~sector_size = (* Read from sector 2 to sector 34. Sector 1 is
             Cstruct.LE.get_uint64 buf last_usable_lba_offset
           in
           let disk_guid_bytes =
-            Cstruct.sub buf disk_guid_offset partition_entry_lba_offset
+            Cstruct.sub buf disk_guid_offset guid_len
             |> Cstruct.to_string
           in
           let disk_guid =
