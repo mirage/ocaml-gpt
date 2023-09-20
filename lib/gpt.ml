@@ -217,32 +217,11 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
     let partitions_crc32 =
       Optint.to_int32 (calculate_partition_crc32 partitions)
     in
-    let header_crc32 =
-      let header =
-        {
-          revision;
-          header_size;
-          header_crc32 = 0l;
-          reserved;
-          current_lba;
-          backup_lba;
-          first_usable_lba;
-          last_usable_lba;
-          disk_guid;
-          partition_entry_lba;
-          num_partition_entries;
-          partitions;
-          partition_size;
-          partitions_crc32;
-        }
-      in
-      Optint.to_int32 (calculate_header_crc32 header)
-    in
-    Ok
+    let header =
       {
         revision;
         header_size;
-        header_crc32;
+        header_crc32 = 0l;
         reserved;
         current_lba;
         backup_lba;
@@ -255,6 +234,10 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
         partition_size;
         partitions_crc32;
       }
+    in
+    let header_crc32 = Optint.to_int32 (calculate_header_crc32 header) in
+    Ok { header with header_crc32 }
+
 
 let signature_offset = 0
 let revision_offset = 8
