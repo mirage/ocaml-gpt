@@ -177,7 +177,7 @@ let calculate_partition_crc32 partitions =
       result)
     Checkseum.Crc32.default partitions
 
-let table_sectors_required num_partition_entries sector_size = 
+let table_sectors_required num_partition_entries sector_size =
   (((num_partition_entries * sizeof) + sector_size - 1) /sector_size)
 let make ?(disk_guid) ~disk_size ~sector_size partitions =
   let num_partition_entries = 128 in
@@ -187,7 +187,6 @@ let make ?(disk_guid) ~disk_size ~sector_size partitions =
       ((Printf.sprintf "Number of partitions %d exceeds required number %d\n%!")
         num_actual_partition_entries num_partition_entries)
   else
-    
     let partition_table_sectors = table_sectors_required num_partition_entries sector_size in
     let partitions =
       List.sort
