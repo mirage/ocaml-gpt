@@ -14,9 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 let ( let* ) = Result.bind
-let sizeof = 128
 
 let guid_len = 16
+
+(* The size of a header not counting the reserved space *)
+let sizeof = 92
 
 module Partition = struct
   type t = {
@@ -179,7 +181,7 @@ let calculate_partition_crc32 partitions =
     Checkseum.Crc32.default partitions
 
 let table_sectors_required num_partition_entries sector_size =
-  (((num_partition_entries * sizeof) + sector_size - 1) /sector_size)
+  (((num_partition_entries * Partition.sizeof) + sector_size - 1) /sector_size)
 
 let make ?(disk_guid) ~disk_size ~sector_size partitions =
   let num_partition_entries = 128 in
