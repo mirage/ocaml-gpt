@@ -34,8 +34,7 @@ let print_gpt_header gpt =
   Printf.printf "  disk-guid: %s\n"
     (Uuidm.to_string ~upper:true gpt.Gpt.disk_guid);
   Printf.printf "  first-partition-lba: %Lu\n" gpt.Gpt.partition_entry_lba;
-  Printf.printf "  total-partitions: %d\n"
-    (Int32.to_int gpt.Gpt.num_partition_entries);
+  Printf.printf "  total-partitions: %lu\n" gpt.Gpt.num_partition_entries;
   Printf.printf "  partition-size: %lu\n" gpt.Gpt.partition_size;
   Printf.printf "  partitions-checksum: %lu\n" gpt.Gpt.partitions_crc32;
   Printf.printf "  Partitions: \n"; 
