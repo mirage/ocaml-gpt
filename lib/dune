@@ -1,5 +1,5 @@
 (library
- (public_name ocaml_gpt)
+ (public_name gpt)
  (name gpt)
  (libraries cstruct uuidm checkseum)
  (modules gpt))
