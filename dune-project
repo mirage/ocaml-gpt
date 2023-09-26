@@ -1,6 +1,6 @@
 (lang dune 3.7)
 
-(name ocaml_gpt)
+(name gpt)
 
 (generate_opam_files true)
 
@@ -9,15 +9,15 @@
 
 (authors "PizieDust <playersrebirth@gmail.com>")
 
-(maintainers "PizieDust <playersrebirth@gmail.com>")
+(maintainers "PizieDust <playersrebirth@gmail.com>" "Reynir Björnsson <reynir@reynir.dk>")
 
 (license ISC)
 
 (documentation https://github.com/PizieDust/ocaml-gpt)
 
 (package
- (name ocaml_gpt)
- (synopsis "A simple library to manipulate GUID Partition tables")
+ (name gpt)
+ (synopsis "A library to manipulate GUID Partition tables")
  (description "A longer description")
  (depends ocaml dune cstruct uuidm checkseum)
  (tags
