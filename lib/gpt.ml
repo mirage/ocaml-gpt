@@ -179,7 +179,7 @@ let calculate_partition_crc32 num_partitions partitions =
 let table_sectors_required num_partition_entries sector_size =
   (((num_partition_entries * Partition.sizeof) + sector_size - 1) /sector_size)
 
-let make ?(disk_guid) ~disk_sectors ~sector_size partitions =
+let make ?(current_lba = 1L) ?(disk_guid) ~disk_sectors ~sector_size partitions =
   let num_partition_entries = 128 in
   let num_actual_partition_entries = List.length partitions in
   let* () =
@@ -207,10 +207,9 @@ let make ?(disk_guid) ~disk_sectors ~sector_size partitions =
          else Error (Printf.sprintf "Partitions overlap"))
       (Ok 1L) partitions
   in
-  let current_lba = 1L in
   let backup_lba = Int64.sub disk_sectors 1L in
   let last_usable_lba = Int64.sub backup_lba 1L in
-  let partition_entry_lba = 2L in
+  let partition_entry_lba = Int64.succ current_lba in
   let first_usable_lba =
     let partition_table_sectors = table_sectors_required num_partition_entries sector_size in
     Int64.(add partition_entry_lba (of_int partition_table_sectors))

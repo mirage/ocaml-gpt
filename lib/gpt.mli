@@ -68,11 +68,12 @@ type t = private {
   partitions : Partition.t list;
 }
 
-val make :  ?disk_guid:Uuidm.t -> disk_sectors:int64 -> sector_size:int ->  Partition.t list -> (t, string) result
-(** [make ?disk_guid ~disk_sectors ~sector_size partitions] constructs a GPT given
-    a desired list of partitions. The header is assumed to be written in LBA 1,
-    and the partition table is written from LBA 2 with 128 partition entries
-    allocated. The backup header is assumed written in the last LBA.
+val make : ?current_lba:int64 -> ?disk_guid:Uuidm.t -> disk_sectors:int64 -> sector_size:int ->  Partition.t list -> (t, string) result
+(** [make ?current_lba ?disk_guid ~disk_sectors ~sector_size partitions]
+    constructs a GPT given a desired list of partitions. The header is assumed
+    to be written in LBA [current_lba], and the partition table is written from
+    LBA [Int64.succ current_lba] with 128 partition entries allocated. The
+    backup header is assumed written in the last LBA.
     An [Error _] is returned if the number of partitions exceeds 128, or any of
     the partitions overlap with each other or the first sector,
 
