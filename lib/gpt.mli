@@ -89,7 +89,7 @@ val unmarshal : Cstruct.t -> sector_size:int ->
    @raise Invalid_argument when [buf] is too small to contain a GPT header
 *)
 
-val marshal_header : sector_size:int -> Cstruct.t -> t -> unit
+val marshal_header : sector_size:int -> primary:bool -> Cstruct.t -> t -> unit
 (** [marshal_header ~sector_size buf t] serializes the GPT header to [buf].
     The caller is expected to write the contents of [buf] to [t.current_lba]
     and [t.backup_lba]. *)

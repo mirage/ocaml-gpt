@@ -167,7 +167,7 @@ let test_marshal_unmarshal () =
     512 * ((len + 511) / 512)
   in
   let buf_partition_table = Cstruct.create partition_table_len in
-  Gpt.marshal_header ~sector_size:512 buf_header morig;
+  Gpt.marshal_header ~sector_size:512 ~primary:true buf_header morig;
   Gpt.marshal_partition_table ~sector_size:512 buf_partition_table morig;
   match Gpt.unmarshal ~sector_size:512 buf_header with
   | Error e -> Alcotest.failf "Failed to parse marshalled gpt header: %s" e
