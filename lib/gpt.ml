@@ -373,9 +373,19 @@ let unmarshal buf ~sector_size =
             partitions_crc32;
           })
 
-let marshal_header ~sector_size (buf : Cstruct.t) t =
+let marshal_header ~sector_size ~primary (buf : Cstruct.t) t =
   if Cstruct.length buf < sector_size || Cstruct.length buf < sizeof then
     invalid_arg "Gpt.marshal_header";
+  let t =
+    if primary then
+      t
+    else
+      (* The backup header has the current and backup LBAs swapped *)
+      let t =
+        { t with current_lba = t.backup_lba; backup_lba = t.current_lba }
+      in
+      { t with header_crc32 = Optint.to_int32 (calculate_header_crc32 t) }
+  in
   Cstruct.blit_from_string signature 0 buf signature_offset revision_offset;
   Cstruct.LE.set_uint32 buf revision_offset t.revision;
   Cstruct.LE.set_uint32 buf header_size_offset t.header_size;
