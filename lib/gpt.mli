@@ -90,10 +90,16 @@ val unmarshal : Cstruct.t -> sector_size:int ->
 *)
 
 val marshal_header : sector_size:int -> primary:bool -> Cstruct.t -> t -> unit
-(** [marshal_header ~sector_size buf t] serializes the GPT header to [buf].
+(** [marshal_header ~sector_size ~primary buf t] serializes the GPT header to [buf].
     The caller is expected to write the contents of [buf] to [t.current_lba]
-    and [t.backup_lba]. *)
+    and [t.backup_lba]. If [primary] is true (default) [t] is marshaled as is.
+    Otherwise [t.current_lba] and [t.backup_lba] are swapped and
+    [t.header_crc32] is recomputedd. *)
 
 val marshal_partition_table : sector_size:int -> Cstruct.t -> t -> unit
 (** [marshal_partition_table ~sector_size buf t] serializes the GPT partition table to [buf].
     The caller is expected to write the contents of [buf] to [t.partition_entry_lba]. *)
+
+val protective_mbr : sector_size:int -> t -> Mbr.t
+(** [protective_mbr ~sector_size t] is the protective MBR written at LBA 0 for
+    GPT header [t] using [sector_size] byte sector size. *)

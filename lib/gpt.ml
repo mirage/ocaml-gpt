@@ -418,3 +418,18 @@ let marshal_partition_table ~sector_size (buf : Cstruct.t) t =
   Cstruct.memset
     (Cstruct.shift buf (Int32.to_int t.num_partition_entries * Partition.sizeof))
     0
+
+let protective_mbr ~sector_size t =
+  (* XXX(reynir): unclear to me if the protective MBR should use 512 byte block size *)
+  if sector_size < 512 || sector_size land 511 <> 0 then
+    invalid_arg "Gpt.protective_mbr";
+  let factor = sector_size / 512 in
+  let partition =
+    let size =
+      Int64.(to_int32 (min 0xFFFFFFFFL (mul (of_int factor) (succ t.last_usable_lba))))
+    in
+    Mbr.Partition.make ~active:true ~partition_type:0xEE 1l size
+    |> Result.get_ok
+  in
+  Mbr.make [ partition ]
+  |> Result.get_ok

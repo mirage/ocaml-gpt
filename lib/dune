@@ -1,5 +1,5 @@
 (library
  (public_name gpt)
  (name gpt)
- (libraries cstruct uuidm checkseum)
+ (libraries cstruct uuidm checkseum mbr-format)
  (modules gpt))
