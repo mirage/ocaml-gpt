@@ -419,6 +419,8 @@ let marshal_partition_table ~sector_size (buf : Cstruct.t) t =
     (Cstruct.shift buf (Int32.to_int t.num_partition_entries * Partition.sizeof))
     0
 
+(* NOTE(reynir): The protective MBR is so simple that we probably don't need
+   the mbr-format library for this. *)
 let protective_mbr ~sector_size t =
   (* XXX(reynir): unclear to me if the protective MBR should use 512 byte block size *)
   if sector_size < 512 || sector_size land 511 <> 0 then
