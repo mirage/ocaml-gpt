@@ -19,7 +19,7 @@
  (name gpt)
  (synopsis "A library to manipulate GUID Partition tables")
  (description "A longer description")
- (depends ocaml dune cstruct uuidm checkseum mbr-format (alcotest :with-test) (fmt :with-test))
+ (depends (ocaml (>= "4.13.0")) dune cstruct (uuidm (>= "0.9.7")) (checkseum (>= "0.4.0")) (mbr-format (>= "2.0.0")) (alcotest :with-test) (fmt :with-test))
  (tags
   ("mirage" "ocaml" "storage" "gpt")))
 
