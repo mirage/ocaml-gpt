@@ -102,4 +102,5 @@ val marshal_partition_table : sector_size:int -> Cstruct.t -> t -> unit
 
 val protective_mbr : sector_size:int -> t -> Mbr.t
 (** [protective_mbr ~sector_size t] is the protective MBR written at LBA 0 for
-    GPT header [t] using [sector_size] byte sector size. *)
+    GPT header [t] using [sector_size] byte sector size.
+    @raise Invalid_argument if [sector_size] is not a positive multiple of 512. *)
