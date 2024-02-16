@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (source
- (github PizieDust/ocaml-gpt))
+ (github mirage/ocaml-gpt))
 
 (authors "PizieDust <playersrebirth@gmail.com>")
 
@@ -13,13 +13,13 @@
 
 (license ISC)
 
-(documentation https://github.com/PizieDust/ocaml-gpt)
+(documentation https://mirage.github.io/ocaml-gpt/)
 
 (package
  (name gpt)
  (synopsis "A library to manipulate GUID Partition tables")
  (description "A longer description")
- (depends ocaml dune cstruct uuidm checkseum)
+ (depends ocaml dune cstruct uuidm checkseum mbr-format (alcotest :with-test) (fmt :with-test))
  (tags
   ("mirage" "ocaml" "storage" "gpt")))
 
