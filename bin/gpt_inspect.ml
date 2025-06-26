@@ -15,10 +15,10 @@ let print_gpt_partitions partitions =
           (Uuidm.to_string ~upper:true part.Gpt.Partition.type_guid);
         Printf.printf "      partition-guid: %s\n"
           (Uuidm.to_string ~upper:true part.Gpt.Partition.partition_guid);
-        Printf.printf "      attributes: %Ld\n" part.Gpt.Partition.attributes;
-        Printf.printf "      starting-lba: %Ld\n"
+        Printf.printf "      attributes: 0x%Lx\n" part.Gpt.Partition.attributes;
+        Printf.printf "      starting-lba: %Lu\n"
           part.Gpt.Partition.starting_lba;
-        Printf.printf "      ending-lba: %Ld\n" part.Gpt.Partition.ending_lba))
+        Printf.printf "      ending-lba: %Lu\n" part.Gpt.Partition.ending_lba))
     partitions
 
 let print_gpt_header gpt =
