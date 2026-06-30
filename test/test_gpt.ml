@@ -89,6 +89,61 @@ let test_make_partition () =
   | Ok partition -> ignore partition
   | Error error -> Alcotest.failf "Error creating partition: %s" error
 
+let test_make_partition_invalid_name1 () =
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
+  let r =
+    Gpt.Partition.make ~type_guid
+      ~name:"Not UTF-16LE!"
+      ~attributes:255L 2048L 4096L
+  in
+  Alcotest.(check (result partition string))
+    "invalid name is an error"
+    (Error "invalid name")
+    r
+
+let test_make_partition_invalid_name2 () =
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
+  let r =
+    Gpt.Partition.make ~type_guid
+      ~name:"café"
+      ~attributes:255L 2048L 4096L
+  in
+  Alcotest.(check (result partition string))
+    "invalid name is an error"
+    (Error "invalid name")
+    r
+
+let test_make_partition_preserved_garbage () =
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
+  let pure_name = utf16le_of_ascii "Partition" in
+  assert (String.length pure_name = 18);
+  let name = pure_name ^ "\000\000" ^ String.make (72 - 18 - 2) '\xff' in
+  match
+    Gpt.Partition.make ~type_guid ~name
+      ~attributes:255L 2048L 4096L
+  with
+  | Ok p ->
+    Alcotest.(check string) "name preserved" pure_name (Gpt.Partition.name p);
+    Alcotest.(check string) "garbage is preserved" name p.name;
+    let cs = Cstruct.create 128 in
+    Gpt.Partition.marshal cs p;
+    let r = Gpt.Partition.unmarshal cs in
+    Alcotest.(check (result partition string))
+      "garbage is preserved in marshal/unmarshal roundtrip"
+      (Ok p)
+      r
+  | Error e -> Alcotest.failf "Expected [Ok _] got [Error %S]" e
+
+let test_make_partition_utf_16le () =
+  let type_guid = Option.get (Uuidm.of_string "12345678-1234-1234-1234-123456789abc") in
+  let name = "c\000a\000f\000\233\000" (* café *) in
+  match Gpt.Partition.make ~type_guid ~name ~attributes:255L 2048L 4096L with
+  | Ok p ->
+    Alcotest.(check string) "utf-16le name" (name ^ String.make (72-8) '\000') p.name;
+    Alcotest.(check string) "utf-16le name name" name (Gpt.Partition.name p)
+  | Error e ->
+    Alcotest.failf "Expected [Ok _] got [Error %S]" e
+
 let test_make_gpt_no_partitions () =
   match Gpt.make ~disk_sectors:1024L ~sector_size:512 [] with
   | Ok _ -> ()
@@ -182,6 +237,10 @@ let test_marshal_unmarshal () =
 let partition_test_collection =
   [
     ("correct-partition", `Quick, test_make_partition);
+    ("invalid-name1", `Quick, test_make_partition_invalid_name1);
+    ("invalid-name2", `Quick, test_make_partition_invalid_name2);
+    ("preserved_garbage", `Quick, test_make_partition_preserved_garbage);
+    ("utf-16le", `Quick, test_make_partition_utf_16le);
   ]
 
 let gpt_header_test_collection =

@@ -22,10 +22,17 @@ module Partition : sig
     starting_lba : int64;
     ending_lba : int64;
     attributes : int64;
-    name : string; (*name should be encoded as a utf-16 string of 72 bytes*)
+    name : string;
+    (** name is a NUL-terminated UTF-16LE encoded string of 72 bytes. Can
+        contain arbitrary data after the NUL. Use {!val:name} to get the
+        UTF-16LE encoded string without trailing NUL and garbage. *)
   }
   (** private field types for the Partition record. Can be created using
       the smart constructors [make] *)
+
+  val name : t -> string
+  (** [name t] is [t.name] truncated up to but not including the terminating
+      UTF-16LE NUL. Note that the string is proper UTF-16LE. *)
 
   val make :
     ?name:string ->
@@ -35,16 +42,18 @@ module Partition : sig
     int64 ->
     (t, string) result
   (** [make ?name ~type_guid ~attributes starting_lba ending_lba] constructs a
-      Partition.t. [name] is assumed to be a zero-padded utf-16le encoded
-      string.
-      @raise Invalid_argument if [name] is not exactly 72 bytes *)
+      Partition.t. [name] is a NUL-terminated UTF-16LE encoded string of at
+      most 72 bytes. If [name] is shorter it is zero-padded. Any data after NUL
+      is preserved as-is. An error is returned if [name] does not satisfy the
+      constraint. *)
 
   val is_zero_partition : t -> bool
   (** [is_zero_partition partition] is [true] if [partition] is the all-zero
       partition (i.e. the unused partition entry) *)
 
-  val unmarshal : Cstruct.t -> t
+  val unmarshal : Cstruct.t -> (t, string) result
   (** [unmarshal buf] is the partition entry encoded in the beginning of [buf].
+      An error is returned if the unmarshaled name is invalid (see {!make}).
       @raise Invalid_argument if [buf] is too small to contain a partition entry. *)
 
   val marshal : Cstruct.t -> t -> unit
