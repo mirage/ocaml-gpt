@@ -61,6 +61,10 @@ let read_gpts sector_size gpts =
        | Error msg ->
          Printf.printf "Failed to read GPT header from %s: %s\n" gpt msg;
          exit 1
+       | Ok (`Read_partition_table (_, num_sectors), _) when num_sectors > 32 ->
+         (* A normal value is 32 sectors. One should check that the number is reasonable. *)
+         Printf.printf "Failed to read GPT partition table from %s: partition table unreasonably large (%d sectors)"
+           gpt num_sectors
        | Ok (`Read_partition_table (lba, num_sectors), k) ->
          let buf = Bytes.create (sector_size * num_sectors) in
          let _ = Unix.lseek fd (sector_size * Int64.to_int lba) Unix.SEEK_SET in
