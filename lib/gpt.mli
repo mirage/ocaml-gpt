@@ -36,6 +36,7 @@ module Partition : sig
 
   val make :
     ?name:string ->
+    ?partition_guid:Uuidm.t ->
     type_guid:Uuidm.t ->
     attributes:int64 ->
     int64 ->
@@ -44,7 +45,9 @@ module Partition : sig
   (** [make ?name ~type_guid ~attributes starting_lba ending_lba] constructs a
       Partition.t. [name] is a NUL-terminated UTF-16LE encoded string of at
       most 72 bytes. If [name] is shorter it is zero-padded. Any data after NUL
-      is preserved as-is. An error is returned if [name] does not satisfy the
+      is preserved as-is. If [?name] is not provided then the empty string is
+      used (72 zero bytes). If no [?partition_guid] is provided a random v4
+      UUID is generated. An error is returned if [name] does not satisfy the
       constraint. *)
 
   val is_zero_partition : t -> bool

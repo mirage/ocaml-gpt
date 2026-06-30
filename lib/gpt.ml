@@ -59,8 +59,12 @@ module Partition = struct
     in
     go 0
 
-  let make ?(name =  String.make 72 '\000') ~type_guid ~attributes starting_lba ending_lba =
-    let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
+  let make ?(name =  String.make 72 '\000') ?partition_guid ~type_guid ~attributes starting_lba ending_lba =
+    let partition_guid =
+      match partition_guid with
+      | None -> Uuidm.v4 (Bytes.init 16 (fun _ -> char_of_int (Random.int 256)))
+      | Some partition_guid -> partition_guid
+    in
     if not (valid_name name) then
       Error "invalid name"
     else
