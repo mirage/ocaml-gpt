@@ -27,22 +27,57 @@ module Partition = struct
     starting_lba : int64;
     ending_lba : int64;
     attributes : int64;
-    name : string; (*name should be encoded as a utf-16 string of 72 bytes*)
+    name : string; (* name is a NUL terminated UTF-16LE string of 72 bytes *)
   }
+
+  let valid_name name =
+    let rec valid_utf16_le off =
+      (* Check that the string is valid utf-16le up to NULL. If it is not NULL
+         terminated we require that it can be NULL terminated within 72 bytes.
+         We don't use [String.is_valid_utf_16le] because we 1) need to check
+         that it is NUL-terminated, and 2) don't care if what comes after the
+         NUL is valid utf-16le or not. 2) ensures we can call [Partition.make
+         ~name] using [name] from an unmarshaled partition entry as-is. *)
+      if off = String.length name then String.length name < 72 else
+      off < String.length name &&
+      let r = String.get_utf_16le_uchar name off in
+      Uchar.utf_decode_is_valid r &&
+      let u = Uchar.utf_decode_uchar r in
+      Uchar.equal u (Uchar.of_char '\000') ||
+      valid_utf16_le (off + Uchar.utf_decode_length r)
+    in
+    String.length name <= 72 &&
+    valid_utf16_le 0
+
+  let name { name; _ } =
+    let rec go idx =
+      if idx + 1 >= String.length name then name
+      else if String.get name idx = '\000' &&
+              String.get name (succ idx) = '\000' then
+        String.sub name 0 idx
+      else go (idx + 2)
+    in
+    go 0
 
   let make ?(name =  String.make 72 '\000') ~type_guid ~attributes starting_lba ending_lba =
     let partition_guid = Uuidm.v4_gen (Random.State.make_self_init ()) () in
-    if String.length name <> 72 then
-      Printf.ksprintf invalid_arg "Name length %d should be exactly 72\n" (String.length name);
-    Ok
-      {
-        type_guid;
-        partition_guid;
-        starting_lba;
-        ending_lba;
-        attributes;
-        name;
-      }
+    if not (valid_name name) then
+      Error "invalid name"
+    else
+      let name =
+        if String.length name < 72 then
+          String.init 72 (fun i -> if i < String.length name then name.[i] else '\000')
+        else name
+      in
+      Ok
+        {
+          type_guid;
+          partition_guid;
+          starting_lba;
+          ending_lba;
+          attributes;
+          name;
+        }
 
   let is_zero_partition p =
     let zero_uuid = Option.get (Uuidm.of_string "00000000-0000-0000-0000-000000000000") in
@@ -81,7 +116,10 @@ module Partition = struct
     let attributes = Cstruct.LE.get_uint64 buf attributes_offset in
     let name_bytes = Cstruct.sub buf name_offset 72 in
     let name = Cstruct.to_string name_bytes in
-    { type_guid; partition_guid; starting_lba; ending_lba; attributes; name }
+    if not (valid_name name) then
+      Error "invalid name"
+    else
+      Ok { type_guid; partition_guid; starting_lba; ending_lba; attributes; name }
 
   let marshal (buf : Cstruct.t) t =
     let name_buf = Cstruct.create 72 in
@@ -341,15 +379,16 @@ let unmarshal buf ~sector_size =
           else
             Error "Bad partition table checksum"
         in
-        let rev_partitions =
+        let* rev_partitions =
           List.fold_left
             (fun acc buf ->
-               let entry = Partition.unmarshal buf in
+               let* acc in
+               let* entry = Partition.unmarshal buf in
                if Partition.is_zero_partition entry then
-                 acc
+                 Ok acc
                else
-                 entry :: acc)
-            []
+                 Ok (entry :: acc))
+            (Ok [])
             (List.init
                (Int32.to_int num_partition_entries)
                (fun i -> Cstruct.sub buf (i * Partition.sizeof) Partition.sizeof))
