@@ -324,8 +324,11 @@ let unmarshal buf ~sector_size =
       Error (Printf.sprintf "Unexpected partition size: %lu" partition_size)
     else Ok ()
   in
-  let partition_entry_sectors =
-    (Int32.to_int num_partition_entries * Partition.sizeof + sector_size - 1) / sector_size
+  let* partition_entry_sectors =
+    match Int32.unsigned_to_int num_partition_entries with
+    | None -> Error "number of partitions exceeds int"
+    | Some num_entries ->
+      Ok ((num_entries * Partition.sizeof + sector_size - 1) / sector_size)
   in
   Ok (`Read_partition_table (partition_entry_lba, partition_entry_sectors),
       fun buf ->
