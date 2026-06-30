@@ -324,17 +324,19 @@ let unmarshal buf ~sector_size =
       Error (Printf.sprintf "Unexpected partition size: %lu" partition_size)
     else Ok ()
   in
-  let* partition_entry_sectors =
+  let* partition_table_size =
     match Int32.unsigned_to_int num_partition_entries with
     | None -> Error "number of partitions exceeds int"
-    | Some num_entries ->
-      Ok ((num_entries * Partition.sizeof + sector_size - 1) / sector_size)
+    | Some num_entries -> Ok (num_entries * Partition.sizeof)
+  in
+  let partition_entry_sectors =
+    (partition_table_size + sector_size - 1) / sector_size
   in
   Ok (`Read_partition_table (partition_entry_lba, partition_entry_sectors),
       fun buf ->
-        if Cstruct.length buf < Int32.to_int num_partition_entries * Partition.sizeof then
+        if Cstruct.length buf < partition_table_size then
           Printf.ksprintf invalid_arg "partition table buffer too small";
-        let buf = Cstruct.sub buf 0 (Int32.to_int num_partition_entries * Partition.sizeof) in
+        let buf = Cstruct.sub buf 0 partition_table_size in
         let partitions_crc32' =
           Checkseum.Crc32.digest_bigstring buf.buffer buf.off buf.len Checkseum.Crc32.default
           |> Checkseum.Crc32.to_int32
