@@ -82,11 +82,16 @@ val make :  ?disk_guid:Uuidm.t -> disk_sectors:int64 -> sector_size:int ->  Part
 val unmarshal : Cstruct.t -> sector_size:int ->
   ([ `Read_partition_table of int64 * int ] * (Cstruct.t -> (t, string) result) , string) result
 (** [unmarshal ~sector_size buf] on success is a pair [(`Read_partition (lba, num_sectors), k)]
-   where [lba] is the logical block address (sector) to read [num_sectors]
-   sectors of the partition table. The bytes read should then be passed to [k]
-   which then on success returns the GPT header and the partition table.
-   An [Error _] is returned when any field has an unexpected value or the checksums are wrong.
-   @raise Invalid_argument when [buf] is too small to contain a GPT header
+    where [lba] is the logical block address (sector) to read [num_sectors]
+    sectors of the partition table. The bytes read should then be passed to [k]
+    which then on success returns the GPT header and the partition table.
+    An [Error _] is returned when any field has an unexpected value or the checksums are wrong.
+
+    {e Warning:} The returned [num_sectors] is derived from the header. If the
+    header is not trusted consider checking that [num_sectors] is a reasonable
+    value so as to not exhaust memory. A typical value is 32.
+
+    @raise Invalid_argument when [buf] is too small to contain a GPT header
 *)
 
 val marshal_header : sector_size:int -> primary:bool -> Cstruct.t -> t -> unit
